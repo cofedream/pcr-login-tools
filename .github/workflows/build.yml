@@ -58,6 +58,20 @@ jobs:
       - name: 编译
         run: cargo build --release --locked --target ${{ matrix.target }}
 
+      - name: 校验 Linux 产物是纯静态
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          set -euo pipefail
+          bin="target/${{ matrix.target }}/release/pcr-auth"
+          file "$bin"
+          if readelf -l "$bin" | grep -q INTERP; then
+            echo "::error::产物带 PT_INTERP，依赖 musl loader，glibc 系统上跑不起来"
+            readelf -l "$bin" | grep -A1 INTERP
+            exit 1
+          fi
+          # 在只有 glibc 的环境里实跑一次：动态链接 musl 的产物会在这里失败
+          docker run --rm -v "$PWD/$bin:/pcr-auth:ro" debian:12-slim /pcr-auth --version
+
       - name: 收集产物
         shell: bash
         env:

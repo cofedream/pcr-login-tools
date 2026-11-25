@@ -8,6 +8,11 @@
 
 [target.x86_64-unknown-linux-musl]
 linker = "musl-gcc"
+# Ubuntu 22.04（jammy）的 musl-gcc.specs 缺 --no-dynamic-linker：它会无条件传
+# -dynamic-linker /lib/ld-musl-x86_64.so.1，导致静态 PIE 产物带上 PT_INTERP，
+# 在 glibc 系统上执行会报 "cannot execute: required file not found"。
+# 静态 PIE 自身会重定位，不需要解释器，这里显式去掉。
+rustflags = ["-C", "link-arg=-Wl,--no-dynamic-linker"]
 
 [target.aarch64-unknown-linux-musl]
 linker = "aarch64-linux-musl-gcc"

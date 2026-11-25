@@ -42,7 +42,14 @@ cargo build --release --target x86_64-unknown-linux-musl
 ```
 
 产物：`target/x86_64-unknown-linux-musl/release/pcr-auth`，`file` 会显示
-`statically linked`，可以丢到任意 x86_64 Linux（含 Alpine）上跑。
+`static-pie linked`，可以丢到任意 x86_64 Linux（含 Alpine）上跑。
+
+> **踩过的坑**：Ubuntu 22.04（jammy）的 `musl-gcc.specs` 会无条件传
+> `-dynamic-linker /lib/ld-musl-x86_64.so.1`，给静态 PIE 产物塞进一个 `PT_INTERP` 段。
+> 这种文件在 glibc 系统上执行会报 `cannot execute: required file not found`
+> （因为机器上没有 musl loader）。仓库的 `.cargo/config.toml` 已给该 target 补了
+> `-C link-arg=-Wl,--no-dynamic-linker`；CI 里也会检查 `readelf -l | grep INTERP`
+> 并在 `debian:12-slim`（只有 glibc）里实跑一次，避免再发出坏包。
 
 **为什么需要 `musl-tools`**：TLS 依赖 `ring`，它有 C 与汇编实现，交叉编译必须有目标平台的
 C 编译器。仓库里的 `.cargo/config.toml` 已经配好：
