@@ -1,0 +1,21 @@
+[package]
+name = "pcr-auth"
+description = "公主连结（B服）账号登录：B站 SDK 登录 + 游戏服务器会话建立"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+aes.workspace = true
+base64.workspace = true
+cbc.workspace = true
+generic-array.workspace = true
+md-5.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+rmpv.workspace = true
+rsa.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

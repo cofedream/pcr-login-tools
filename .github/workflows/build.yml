@@ -1,0 +1,82 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux：musl 静态链接，不依赖目标机器的 glibc 版本
+          - name: pcr-auth-linux-x86_64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            apt: musl-tools
+          # Windows：原生 MSVC 工具链，不需要交叉编译
+          - name: pcr-auth-windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          # macOS：顺手出两个架构
+          - name: pcr-auth-macos-arm64
+            os: macos-14
+            target: aarch64-apple-darwin
+          - name: pcr-auth-macos-x86_64
+            os: macos-14
+            target: x86_64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: 安装交叉编译工具链
+        if: matrix.apt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.apt }}
+
+      - name: 编译
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: 收集产物
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          bin="target/${TARGET}/release/pcr-auth"
+          [ -f "${bin}.exe" ] && bin="${bin}.exe"
+          out="dist/${{ matrix.name }}"
+          case "$bin" in *.exe) out="${out}.exe" ;; esac
+          mkdir -p dist
+          cp "$bin" "$out"
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: dist/*
+
+      - name: 附加到 Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

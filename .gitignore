@@ -1,0 +1,6 @@
+/target
+/dist
+
+# 本地账号数据：含明文密码与 access_key，绝不入库
+pcr-accounts.json
+*.json.tmp

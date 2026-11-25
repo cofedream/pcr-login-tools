@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>完成一次验证</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f6f7f9; --card:#fff; --text:#1c1e21; --muted:#6b7280; --line:#e5e7eb; --ok:#059669; --err:#dc2626; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1115; --card:#171a21; --text:#e6e8eb; --muted:#9aa3af; --line:#262b35; --ok:#34d399; --err:#f87171; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: var(--bg); color: var(--text);
+    font: 14px/1.6 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  h1 { font-size: 17px; margin: 0 0 6px; }
+  p { margin: 0; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .sub code { font-family: ui-monospace, Menlo, monospace; color: var(--text); word-break: break-all; }
+  #captcha { min-height: 44px; }
+  #status { margin-top: 14px; font-size: 12px; color: var(--muted); }
+  #status.ok { color: var(--ok); }
+  #status.error { color: var(--err); }
+</style>
+</head>
+<body>
+<main>
+  <h1>完成一次验证</h1>
+  <p class="sub">账号 <code>__ACCOUNT__</code> 触发了 B 站风控的人机验证。通过后会自动继续，完成后可关闭本页面。</p>
+  <div id="captcha"></div>
+  <p id="status">正在加载验证组件…</p>
+</main>
+
+<script src="https://static.geetest.com/static/tools/gt.js"></script>
+<script>
+"use strict";
+
+const JOB_ID = "__JOB_ID__";
+const status = document.getElementById("status");
+
+function setStatus(text, kind) {
+  status.textContent = text;
+  status.className = kind || "";
+}
+
+function fail(text) {
+  setStatus(text, "error");
+}
+
+if (typeof initGeetest !== "function") {
+  fail("验证组件加载失败（无法访问 static.geetest.com）。请检查网络后刷新；也可以改用命令行的 --captcha-* 参数提交。");
+} else {
+  initGeetest(
+    {
+      gt: "__GT__",
+      challenge: "__CHALLENGE__",
+      new_captcha: true,
+      product: "float",
+      lang: "zh-cn",
+    },
+    function (instance) {
+      instance.onReady(function () {
+        setStatus("请完成下方的验证");
+      });
+
+      instance.onSuccess(function () {
+        const result = instance.getValidate();
+        setStatus("验证通过，正在提交…");
+        fetch("/api/captcha/" + encodeURIComponent(JOB_ID), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            challenge: result.geetest_challenge,
+            validate: result.geetest_validate,
+          }),
+        })
+          .then(function (response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            setStatus("已完成。可以关闭本页面，回到登录页查看结果。", "ok");
+          })
+          .catch(function (error) {
+            fail("提交失败：" + error.message + "，请刷新重试");
+          });
+      });
+
+      instance.onError(function (error) {
+        console.error(error);
+        fail("验证出错，请刷新页面重试");
+      });
+
+      instance.appendTo("#captcha");
+    }
+  );
+}
+</script>
+</body>
+</html>
