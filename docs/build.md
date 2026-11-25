@@ -89,21 +89,24 @@ cargo zigbuild --release --target x86_64-unknown-linux-musl
 
 ## 4. CI：打 tag 自动出包
 
-`.github/workflows/build.yml` 用原生 runner 编译四个目标：
+`.github/workflows/build.yml` 用原生 runner 编译：
 
 ```
-pcr-auth-linux-x86_64      (musl, 静态)
-pcr-auth-linux-aarch64     (musl, 静态)
-pcr-auth-windows-x86_64.exe
-pcr-auth-macos-arm64
-pcr-auth-macos-x86_64
+pcr-auth-linux-x86_64     musl 静态链接，不挑发行版（实测 3.1 MB）
+pcr-auth-windows-x86_64   MSVC 原生构建（实测 2.6 MB）
 ```
+
+触发方式：
+
+- push 到 `main` / 提 PR：只构建、上传 artifact（实测已通过）
+- 打 tag：额外把产物挂到 Release
 
 ```bash
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-产物会挂在 Release 上，同时在 Actions 页面可下载 artifact。
+macOS 目标在 workflow 里留了注释，取消注释即可；新增仓库首次构建时 macOS runner
+可能排队较久被判 cancelled，重跑就行。
 
 ## 运行时说明
 

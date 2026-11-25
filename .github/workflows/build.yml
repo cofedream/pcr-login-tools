@@ -13,6 +13,11 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+# 同一分支的新推送取消旧构建，省额度
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -30,13 +35,10 @@ jobs:
           - name: pcr-auth-windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-          # macOS：顺手出两个架构
-          - name: pcr-auth-macos-arm64
-            os: macos-14
-            target: aarch64-apple-darwin
-          - name: pcr-auth-macos-x86_64
-            os: macos-14
-            target: x86_64-apple-darwin
+          # 想加 macOS 就直接补两条（首次可能因 runner 排队被取消，重跑即可）：
+          # - name: pcr-auth-macos-arm64
+          #   os: macos-14
+          #   target: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
