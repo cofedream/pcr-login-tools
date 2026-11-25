@@ -4,3 +4,7 @@
 # 本地账号数据：含明文密码与 access_key，绝不入库
 pcr-accounts.json
 *.json.tmp
+
+# 从 Release 下载的产物
+pcr-auth-linux-*
+pcr-auth-windows-*
